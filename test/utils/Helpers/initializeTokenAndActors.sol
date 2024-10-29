@@ -42,4 +42,6 @@ contract initializeTokenAndActors is Test {
     address payReceiver3 = makeAddr("makeReceiver3");
     address payReceiver4 =  makeAddr("makeReceiver4");
     address payReceiver5 = makeAddr("makeReceiver5"); 
+
+    address payNetflix = makeAddr("netnetflixHook");
 }

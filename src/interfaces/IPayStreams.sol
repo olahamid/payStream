@@ -55,18 +55,18 @@ interface IPayStreams {
         bool callAfterStreamClosed;
     }
 
-    event FeeRecipientSet(address newFeeRecipient);
-    event FeeInBasisPointsSet(uint16 _feeInBasisPoints);
-    event TokenSet(address token, bool support);
-    event StreamCreated(bytes32 streamHash);
-    event FeesCollected(address token, uint256 amount);
-    event VaultSet(address by, bytes32 streamHash, address vault);
-    event HookConfigSet(address by, bytes32 streamHash);
-    event FundsCollectedFromStream(bytes32 streamHash, uint256 amountToCollect);
+    event FeeRecipientSet(address indexed newFeeRecipient);
+    event FeeInBasisPointsSet(uint16 indexed _feeInBasisPoints);
+    event TokenSet(address indexed token, bool indexed support);
+    event StreamCreated(bytes32 indexed streamHash);
+    event FeesCollected(address indexed token, uint256 indexed amount);
+    event VaultSet(address indexed by, bytes32 indexed streamHash, address indexed vault);
+    event HookConfigSet(address indexed by, bytes32 indexed streamHash);
+    event FundsCollectedFromStream(bytes32 indexed streamHash, uint256 indexed amountToCollect);
     event StreamUpdated(
-        bytes32 streamHash, uint256 amount, uint256 startingTimestamp, uint256 duration, bool recurring
+        bytes32 indexed streamHash, uint256 amount, uint256 startingTimestamp, uint256 duration, bool recurring
     );
-    event StreamCancelled(bytes32 streamHash);
+    event StreamCancelled(bytes32 indexed streamHash);
 
     error PayStreams__AddressZero();
     error PayStreams__InvalidFeeInBasisPoints(uint16 feeInBasisPoints);
@@ -116,6 +116,5 @@ interface IPayStreams {
         external
         pure
         returns (bytes32);
+    function getAmountToCollectFromStreamAndFeeToPay(bytes32 _streamHash) external view returns (uint256, uint256);
 }
-
-

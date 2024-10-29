@@ -5,12 +5,14 @@ pragma solidity 0.8.24;
 import {MockpyUSD} from "../MOCKS/MockpyUSD.sol";
 import {initializeTokenAndActors} from "../Helpers/initializeTokenAndActors.sol";
 import {IHooks} from "../../../src/interfaces/IHooks.sol";
+import {MakeVaultforStreamer} from "../MOCKS/makeVault.sol";
 
-contract makeHookForStreamer is initializeTokenAndActors{
+contract MakeHook is initializeTokenAndActors{
 
     
     address public onlyStreamer;
     address public hookReceiver = payReceiver;
+
 
     IHooks public iHooks;
 
@@ -30,5 +32,22 @@ contract makeHookForStreamer is initializeTokenAndActors{
         if (worker != hookReceiver) {
             revert makeHook_notMonadexReceiver();
         }
+    }
+
+    function mockHookafterFundsCollected(bytes32 _streamHash, uint amount, uint fee) public {
+        //weekly deposit to subcribe for netFlix address
+        if (msg.sender != hookReceiver){
+            revert makeHook_NotTheStreamerError();
+        }
+        iHooks.afterFundsCollected(_streamHash, amount, fee);
+        uint startingTimeStamp = block.timestamp;
+        uint duration = 1 weeks;
+        if (block.timestamp > startingTimeStamp + duration) {
+            mpyUSD.transferFrom(payReceiver, payNetflix, amount );
+        }
+    }
+
+    function setPoolReceiver(address receiver) public {
+        hookReceiver = receiver;
     }
 }

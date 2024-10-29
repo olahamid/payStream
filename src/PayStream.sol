@@ -10,6 +10,13 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IHooks } from "./interfaces/IHooks.sol";
 import { IPayStreams } from "./interfaces/IPayStreams.sol";
 
+/**
+ * @title PayStreams.
+ * @author mgnfy-view.
+ * @notice PayStreams is a payment streamming service leveraging PYUSD (made for the PayPal
+ * hackathon), and supercharged with hooks.
+ */
+
 contract PayStreams is Ownable, IPayStreams {
     using SafeERC20 for IERC20;
 
@@ -125,7 +132,7 @@ contract PayStreams is Ownable, IPayStreams {
         if (s_streamData[streamHash].streamer != address(0)) revert PayStreams__StreamAlreadyExists(streamHash);
         s_streamData[streamHash] = _streamData;
         s_streamerToStreamHashes[msg.sender].push(streamHash);
-        s_streamerToStreamHashes[_streamData.recipient].push(streamHash);
+        s_recipientToStreamHashes[_streamData.recipient].push(streamHash);
         s_hookConfig[msg.sender][streamHash] = _streamerHookConfig;
 
         if (_streamData.streamerVault != address(0) && _streamerHookConfig.callAfterStreamCreated) {
@@ -179,15 +186,8 @@ contract PayStreams is Ownable, IPayStreams {
         if (streamData.startingTimestamp > block.timestamp) {
             revert PayStreams__StreamHasNotStartedYet(_streamHash, streamData.startingTimestamp);
         }
-
-        uint256 amountToCollect = (
-            streamData.amount * (block.timestamp - streamData.startingTimestamp) / streamData.duration
-        ) - streamData.totalStreamed;
+        (uint256 amountToCollect, uint256 feeAmount) = getAmountToCollectFromStreamAndFeeToPay(_streamHash);
         if (amountToCollect == 0) revert PayStreams__ZeroAmountToCollect();
-        if (amountToCollect > streamData.amount && !streamData.recurring) {
-            amountToCollect = streamData.amount - streamData.totalStreamed;
-        }
-        uint256 feeAmount = (amountToCollect * s_feeInBasisPoints) / BASIS_POINTS;
 
         s_streamData[_streamHash].totalStreamed += amountToCollect;
 
@@ -291,7 +291,7 @@ contract PayStreams is Ownable, IPayStreams {
             IHooks(streamData.streamerVault).beforeStreamClosed(_streamHash);
         }
 
-        delete s_streamData[_streamHash];
+        s_streamData[_streamHash].amount = 0;
 
         if (streamData.streamerVault != address(0) && streamerHookConfig.callAfterStreamClosed) {
             IHooks(streamData.streamerVault).afterStreamClosed(_streamHash);
@@ -385,5 +385,20 @@ contract PayStreams is Ownable, IPayStreams {
         returns (bytes32)
     {
         return keccak256(abi.encode(_streamer, _recipient, _token, _tag));
+    }
+
+    function getAmountToCollectFromStreamAndFeeToPay(bytes32 _streamHash) public view returns (uint256, uint256) {
+        StreamData memory streamData = s_streamData[_streamHash];
+
+        if (block.timestamp < streamData.startingTimestamp) return (0, 0);
+
+        uint256 amountToCollect = (
+            streamData.amount * (block.timestamp - streamData.startingTimestamp) / streamData.duration
+        ) - streamData.totalStreamed;
+        if (amountToCollect > streamData.amount && !streamData.recurring) {
+            amountToCollect = streamData.amount - streamData.totalStreamed;
+        }
+        uint256 feeAmount = (amountToCollect * s_feeInBasisPoints) / BASIS_POINTS;
+        return (amountToCollect - feeAmount, feeAmount);
     }
 }
